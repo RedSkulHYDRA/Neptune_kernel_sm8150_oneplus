@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Kernel version configuration
-KNAME="NeptunePlayground"
+KNAME="NeptunePlayground-YAAP"
 MIN_HEAD=$(git rev-parse HEAD)
 VERSION="$(cat version)-$(date +%m.%d.%y-%H%M)"
 if [[ "${1}" == "k" ]] ; then
