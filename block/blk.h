@@ -79,6 +79,26 @@ static inline void blk_queue_enter_live(struct request_queue *q)
 	percpu_ref_get(&q->q_usage_counter);
 }
 
+#ifndef ARCH_BIOVEC_PHYS_MERGEABLE
+#define ARCH_BIOVEC_PHYS_MERGEABLE(vec1, vec2) true
+#endif
+
+static inline bool biovec_phys_mergeable(struct request_queue *q,
+		struct bio_vec *vec1, struct bio_vec *vec2)
+{
+	unsigned long mask = queue_segment_boundary(q);
+	phys_addr_t addr1 = bvec_to_phys(vec1);
+	phys_addr_t addr2 = bvec_to_phys(vec2);
+
+	if (addr1 + vec1->bv_len != addr2)
+		return false;
+	if (!ARCH_BIOVEC_PHYS_MERGEABLE(vec1, vec2))
+		return false;
+	if ((addr1 | mask) != ((addr2 + vec2->bv_len - 1) | mask))
+		return false;
+	return true;
+}
+
 #ifdef CONFIG_BLK_DEV_INTEGRITY
 void blk_flush_integrity(void);
 bool __bio_integrity_endio(struct bio *);
@@ -273,6 +293,16 @@ static inline void req_set_nomerge(struct request_queue *q, struct request *req)
 	req->cmd_flags |= REQ_NOMERGE;
 	if (req == q->last_merge)
 		q->last_merge = NULL;
+}
+
+/*
+ * The max size one bio can handle is UINT_MAX becasue bvec_iter.bi_size
+ * is defined as 'unsigned int', meantime it has to aligned to with logical
+ * block size which is the minimum accepted unit by hardware.
+ */
+static inline unsigned int bio_allowed_max_sectors(struct request_queue *q)
+{
+	return round_down(UINT_MAX, queue_logical_block_size(q)) >> 9;
 }
 
 /*

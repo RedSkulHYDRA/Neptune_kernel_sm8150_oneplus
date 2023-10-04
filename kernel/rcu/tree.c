@@ -1795,7 +1795,7 @@ static int rcu_future_gp_cleanup(struct rcu_state *rsp, struct rcu_node *rnp)
 static void rcu_gp_kthread_wake(struct rcu_state *rsp)
 {
 	if ((current == rsp->gp_kthread &&
-	     !in_interrupt() && !in_serving_softirq()) ||
+	     !in_irq() && !in_serving_softirq()) ||
 	    !READ_ONCE(rsp->gp_flags) ||
 	    !rsp->gp_kthread)
 		return;
@@ -3925,13 +3925,11 @@ static int rcu_pm_notify(struct notifier_block *self,
 	switch (action) {
 	case PM_HIBERNATION_PREPARE:
 	case PM_SUSPEND_PREPARE:
-		if (nr_cpu_ids <= 256) /* Expediting bad for large systems. */
-			rcu_expedite_gp();
+		rcu_expedite_gp();
 		break;
 	case PM_POST_HIBERNATION:
 	case PM_POST_SUSPEND:
-		if (nr_cpu_ids <= 256) /* Expediting bad for large systems. */
-			rcu_unexpedite_gp();
+		rcu_unexpedite_gp();
 		break;
 	default:
 		break;
@@ -3970,8 +3968,7 @@ static int __init rcu_spawn_gp_kthread(void)
 		raw_spin_lock_irqsave_rcu_node(rnp, flags);
 		rsp->gp_kthread = t;
 		if (kthread_prio) {
-			sp.sched_priority = kthread_prio;
-			sched_setscheduler_nocheck(t, SCHED_FIFO, &sp);
+			sched_set_fifo(t);
 		}
 		raw_spin_unlock_irqrestore_rcu_node(rnp, flags);
 		wake_up_process(t);
@@ -4214,7 +4211,7 @@ void __init rcu_init(void)
 	}
 
 	/* Create workqueue for expedited GPs and for Tree SRCU. */
-	rcu_gp_wq = alloc_workqueue("rcu_gp", WQ_MEM_RECLAIM, 0);
+	rcu_gp_wq = alloc_workqueue("rcu_gp", WQ_MEM_RECLAIM | WQ_UNBOUND, 0);
 	WARN_ON(!rcu_gp_wq);
 }
 
