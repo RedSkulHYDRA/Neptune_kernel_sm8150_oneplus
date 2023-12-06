@@ -4,7 +4,7 @@
 export HOME=/home/redskul
 
 # Compiler environment
-export CLANG_PATH=$HOME/yaap/prebuilts/clang/host/linux-x86/clang-r498229b/bin
+export CLANG_PATH=$HOME/yaap/prebuilts/clang/host/linux-x86/clang-r510928/bin
 export PATH="$CLANG_PATH:$PATH"
 export CROSS_COMPILE=aarch64-linux-gnu-
 export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
